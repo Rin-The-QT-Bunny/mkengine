@@ -105,17 +105,13 @@ class CCount(DiffVertex):
     
     def prop(self,inputs,structure,context):
         #print("namo:",inputs[0])
-        return Rint(torch.sum(inputs[0].probs))
+        return torch.sum(inputs[0].probs)
 
 cimps = [CScene(),CMeasureColor(),CUnique(),CFilterColor(),CCount(),CMeasureRelation(),CFilterRelation()]
 
 # write the executor to execute the program in the context
-context = {"Objects":ObjectSet(torch.randn([3,OBJECT_FEATURE_DIM]),0.999 * torch.ones([3]))}
+context = {"Objects":ObjectSet(nn.Parameter(torch.randn([3,OBJECT_FEATURE_DIM])),nn.Parameter(0.999 * torch.ones([3])))}
 NORD = VertexExecutor(cstructure,cimps)
-
-program = toFuncNode("count(filter_color(red,scene()))")
-outputs = NORD.execute(program,context)
-print(outputs.pdf(True))
 
 programr = toFuncNode("filter_relation(unique(scene()),scene(),left)")
 outputsr = NORD.execute(programr,context)
@@ -130,6 +126,7 @@ outputs = NORD.execute(program,context)
 print(outputs.pdf(True))
 
 optim = torch.optim.Adam(nn.ModuleList([clist,rlist]).parameters(),lr = 2e-3)
+optim2 = torch.optim.Adam(context["Objects"].parameters(),lr=2e-3)
 for epoch in range(100):
     optim.zero_grad()
     program = toFuncNode("measure_color(unique(scene()))")
@@ -144,12 +141,14 @@ for epoch in range(100):
     #loss = loss - NORD.supervise_prob(outputs,"green") 
     #loss = loss -  NORD.supervise_prob(outputsr,"left")
     #loss = loss -  NORD.supervise_prob(outputsr2,"1")
-    loss = loss +  outputsr3.value
+    loss = loss +  outputsr3
     #print(NORD.supervise_prob(outputs,"green") )
     #print( NORD.supervise_prob(outputsr,"left"))
     #print(outputsr2.value,NORD.supervise_prob(outputsr2,"1"))
-    print(outputsr3.value,NORD.supervise_prob(outputsr3,"2"))
-    loss.backward();optim.step()
+    print(outputsr3)
+    loss.backward()
+    optim.step()
+    optim2.step()
     if epoch%10 == 0 : print("Working Loss: ",dnp(loss))
 
 print(outputs.pdf(True))
