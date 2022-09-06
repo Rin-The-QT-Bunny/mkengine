@@ -59,9 +59,11 @@ class CFilterColor(DiffVertex):
         self.name = "filter_color"
     
     def prop(self,inputs,structure,context):
-        input_color = 'blue'
+        #print(inputs)
+        input_color = inputs[0]
         input_set = inputs[1]
         filter_scores = []
+        #print("set:",input_set)
         for i in range(input_set.features.shape[0]):
             prior_prob = input_set.probs[i]
             filter_prob = structure.PrConceptMeasure(input_color,input_set.features[i])
@@ -102,6 +104,7 @@ class CCount(DiffVertex):
         self.name = "count"
     
     def prop(self,inputs,structure,context):
+        #print("namo:",inputs[0])
         return Rint(torch.sum(inputs[0].probs))
 
 cimps = [CScene(),CMeasureColor(),CUnique(),CFilterColor(),CCount(),CMeasureRelation(),CFilterRelation()]
@@ -126,15 +129,26 @@ program = toFuncNode("measure_color(unique(scene()))")
 outputs = NORD.execute(program,context)
 print(outputs.pdf(True))
 
-optim = torch.optim.Adam(nn.ModuleList([clist,rlist]).parameters(),lr = 2e-2)
+optim = torch.optim.Adam(nn.ModuleList([clist,rlist]).parameters(),lr = 2e-3)
 for epoch in range(100):
     optim.zero_grad()
     program = toFuncNode("measure_color(unique(scene()))")
     outputs = NORD.execute(program,context)
     programr = toFuncNode("measure_relation(unique(scene()),unique(scene()))")
     outputsr = NORD.execute(programr,context)
-    loss = 0 - NORD.supervise_prob(outputs,"green") 
-    loss = loss -  NORD.supervise_prob(outputsr,"left")
+    programr2 = toFuncNode("count(filter_color(green,scene()))")
+    outputsr2 = NORD.execute(programr2,context)
+    programr3 = toFuncNode("count(scene())")
+    outputsr3 = NORD.execute(programr3,context)
+    loss = 0
+    #loss = loss - NORD.supervise_prob(outputs,"green") 
+    #loss = loss -  NORD.supervise_prob(outputsr,"left")
+    #loss = loss -  NORD.supervise_prob(outputsr2,"1")
+    loss = loss +  outputsr3.value
+    #print(NORD.supervise_prob(outputs,"green") )
+    #print( NORD.supervise_prob(outputsr,"left"))
+    #print(outputsr2.value,NORD.supervise_prob(outputsr2,"1"))
+    print(outputsr3.value,NORD.supervise_prob(outputsr3,"2"))
     loss.backward();optim.step()
     if epoch%10 == 0 : print("Working Loss: ",dnp(loss))
 

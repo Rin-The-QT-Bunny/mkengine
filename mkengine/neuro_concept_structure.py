@@ -8,7 +8,6 @@ from .neuro_types import *
 # Pr[c|e] which means the outcome prob of e entails c 
 # Pr[r|e1,e2] which means the prob of (e1,e1) entails r
 
-
 # Basic concept types of for the concept structure
 
 class ConceptDot(nn.Module):
