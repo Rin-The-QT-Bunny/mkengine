@@ -140,3 +140,5 @@ for epoch in range(100):
 
 print(outputs.pdf(True))
 print(outputsr.pdf(True))
+
+print(context["Objects"].probs)
